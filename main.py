@@ -71,6 +71,12 @@ def main():
         help="数组名称，默认shellcode",
     )
     parser.add_argument(
+        "--nop-sled",
+        type=int,
+        default=0,
+        help="NOP sled长度，在shellcode前面添加0x90指令的数量，默认为0",
+    )
+    parser.add_argument(
         "-e",
         "--encrypt",
         choices=["none", "rot", "rc4", "xor", "aes"],
@@ -194,16 +200,20 @@ def main():
         encrypt_info = f" (加密: {args.encrypt})" if args.encrypt != "none" else ""
         print(f"// Shellcode size: {len(shellcode)} bytes{encrypt_info}")
         if args.language == "c":
-            result = to_c_byte_array(shellcode, args.section, args.name)
+            result = to_c_byte_array(shellcode, args.section, args.name, args.nop_sled)
             print(result)
         elif args.language == "go":
-            result = to_go_byte_slice(shellcode, args.section, args.name)
+            result = to_go_byte_slice(shellcode, args.section, args.name, args.nop_sled)
             print(result)
         elif args.language == "rust":
-            result = to_rust_byte_slice(shellcode, args.section, args.name)
+            result = to_rust_byte_slice(
+                shellcode, args.section, args.name, args.nop_sled
+            )
             print(result)
         elif args.language == "zig":
-            result = to_zig_byte_slice(shellcode, args.section, args.name)
+            result = to_zig_byte_slice(
+                shellcode, args.section, args.name, args.nop_sled
+            )
             print(result)
 
 

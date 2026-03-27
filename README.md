@@ -53,8 +53,9 @@ python main.py <文件> [选项]
 | --func     | -f | 功能类型     | code, ip, mac, uuid              | code      |
 | --encrypt  | -e | 加密方式     | none, rot, rc4, xor, aes         | none      |
 | --key      | -k | 加密密钥     | -                                | -         |
-| --section  | -s | 段名称      | .data, .rdata, .text, .rsrc 或自定义 | .data     |
+| --section  | -s | 段名称       | .data, .rdata, .text, .rsrc 或自定义 | .data     |
 | --name     | -n | 数组名称     | -                                | shellcode |
+| --nop-sled | -  | NOP sled长度 | 整数（0-255）                      | 0        |
 | --ipv4     | -4 | 使用IPv4格式 | -                                | false     |
 | --ipv6     | -6 | 使用IPv6格式 | -                                | false     |
 
@@ -172,14 +173,28 @@ python main.py shellcode.bin -l zig -f code -s .rsrc -e aes -k "mykey123"
 ```
 
 输出示例:
-
 ```zig
 // Shellcode size: 32 bytes (加密: aes)
 // Section: .rsrc
 const shellcode = [_]u8{0x1a, 0x2b, 0x3c, 0x4d, 0x5e, 0x6f, 0x70, 0x81, 0x92, 0xa3, 0xb4, 0xc5, 0xd6, 0xe7, 0xf8, 0x09, 0x1a, 0x2b, 0x3c, 0x4d, 0x5e, 0x6f, 0x70, 0x81, 0x92, 0xa3, 0xb4, 0xc5, 0xd6, 0xe7, 0xf8, 0x09};
 ```
 
-### 8. 转换为IPv4地址列表（RC4加密）
+### 8. 转换为Go字节数组（带NOP sled）
+
+```bash
+python main.py shellcode.bin -l go -f code --nop-sled 16
+```
+
+输出示例:
+```go
+// Shellcode size: 27 bytes
+// NOP sled: 16 bytes
+//go:section .data
+//go:linkname shellcode .data
+var shellcode = []byte{0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0xfc, 0xe8, 0x82, 0x00, 0x00, 0x00, 0x60, 0x89, 0xe5, 0x31, 0xc0, 0x64, 0x8b, 0x50, 0x30, 0x8b, 0x52, 0x0c, 0x8b, 0x52, 0x14, 0x8b, 0x72, 0x28, 0x0f, 0xb7, 0x4a, 0x26}
+```
+
+### 9. 转换为IPv4地址列表（RC4加密）
 
 ```bash
 python main.py shellcode.bin -l rust -f ip -4 -e rc4 -k "key123"
