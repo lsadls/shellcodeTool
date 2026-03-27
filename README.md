@@ -273,9 +273,9 @@ const OBFUSCATED_UUIDS = [_][]const u8{
 | .rsrc  | 资源段   | 可读，用于存储资源           |
 | 自定义段   | 用户定义  | 可自定义段名（如.mysection） |
 
-### C语言段定义
+### C 语言段定义
 
-C语言输出使用以下语法：
+C 语言输出使用以下语法：
 
 ```c
 #pragma section(".section_name", read, write)
@@ -286,13 +286,32 @@ __declspec(allocate(".section_name")) unsigned char array_name[] = {
 unsigned int array_name_len = sizeof(array_name);
 ```
 
-### 其他语言段注释
+### Go 语言段定义
 
-Go/Rust/Zig语言的段参数仅作为注释输出：
+Go 语言使用 `//go:section` 和 `//go:linkname` 指令实现段放置：
 
 ```go
-// Section: .rdata
-var shellcode = []byte{...}
+//go:section .rdata
+//go:linkname shellcode .rdata
+var shellcode = []byte{0x90, 0x90, 0x90}
+```
+
+### Rust 语言段定义
+
+Rust 语言使用 `#[link_section]` 属性实现段放置：
+
+```rust
+#[link_section = ".rdata"]
+static shellcode: &[u8] = &[0x90, 0x90, 0x90];
+```
+
+### Zig 语言段定义
+
+Zig 语言使用 `@linksection` 实现段放置：
+
+```zig
+comptime { @linksection(".rdata"); }
+const shellcode = [_]u8{ 0x90, 0x90, 0x90 };
 ```
 
 ## 加密算法说明
@@ -358,7 +377,7 @@ var shellcode = []byte{...}
 4. AES 加密会自动填充数据，输出长度可能增加
 5. C 语言输出会生成完整的段定义（#pragma section 和\_\_declspec）
 6. Go 语言使用 //go:section 和 //go:linkname 指令实现段放置
-7. Rust 语言使用 #[link_section] 属性实现段放置
+7. Rust 语言使用 #\[link\_section] 属性实现段放置
 8. Zig 语言使用 @linksection 实现段放置
 9. 自定义段名可以用于特殊的 PE 文件段（如.rsrc、.pdata 等）
 10. 数组名称参数（-n）可用于所有语言，方便代码集成
