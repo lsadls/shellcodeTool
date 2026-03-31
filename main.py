@@ -7,6 +7,9 @@ Shellcode转换工具 - 主程序
     - 支持多种混淆方式（IP地址、MAC地址、UUID）
     - 支持多种加密算法（ROT、RC4、XOR、AES）
     - 支持自定义段放置（.data/.rdata/.text/.rsrc/自定义）
+    - 支持垃圾指令插入
+    - 支持控制流混淆
+    - 支持多态加密
 
 使用方法:
     python main.py <文件> [选项]
@@ -15,12 +18,20 @@ Shellcode转换工具 - 主程序
     python main.py shellcode.bin -l rust -f code -e xor -k "secret"
     python main.py shellcode.bin -l go -f ip -4 -e rc4 -k "key123"
     python main.py shellcode.bin -l c -f code -s .rdata -e aes -k "mykey"
+    python main.py shellcode.bin -l rust -f code --junk-instructions 10 --junk-type nop
+    python main.py shellcode.bin -l go -f code --control-flow 0.3
+    python main.py shellcode.bin -l zig -f code --polymorphic -k "secret"
 """
 
 import sys
 import argparse
 from converters import shellcode_to_ips, shellcode_to_macs, shellcode_to_uuids
 from encryption import rot_encrypt, rc4_encrypt, xor_encrypt, aes_encrypt
+from obfuscator import (
+    add_junk_instructions,
+    add_control_flow_obfuscation,
+    add_polymorphic_encryption,
+)
 from formatters import (
     to_go_byte_slice,
     to_rust_byte_slice,
@@ -75,6 +86,29 @@ def main():
         type=int,
         default=0,
         help="NOP sled长度，在shellcode前面添加0x90指令的数量，默认为0",
+    )
+    parser.add_argument(
+        "--junk-instructions",
+        type=int,
+        default=0,
+        help="垃圾指令数量，在shellcode前面添加垃圾指令的数量，默认为0",
+    )
+    parser.add_argument(
+        "--junk-type",
+        choices=["nop", "jmp", "call"],
+        default="nop",
+        help="垃圾指令类型: nop(NOP指令), jmp(JMP指令), call(CALL指令), 默认nop",
+    )
+    parser.add_argument(
+        "--control-flow",
+        type=float,
+        default=0.0,
+        help="控制流混淆概率 (0.0-1.0)，0表示不混淆，默认为0.0",
+    )
+    parser.add_argument(
+        "--polymorphic",
+        action="store_true",
+        help="启用多态加密，每次加密使用不同的加密方式组合",
     )
     parser.add_argument(
         "-e",
@@ -134,6 +168,22 @@ def main():
             sys.exit(1)
         shellcode = aes_encrypt(shellcode, args.key)
 
+    if args.polymorphic:
+        if not args.key:
+            print("错误: 多态加密需要指定密钥 (-k 参数)")
+            sys.exit(1)
+        shellcode, encryption_log, decryption_code = add_polymorphic_encryption(
+            shellcode, args.key, args.language
+        )
+
+    if args.junk_instructions > 0:
+        shellcode = add_junk_instructions(
+            shellcode, args.junk_instructions, args.junk_type
+        )
+
+    if args.control_flow > 0:
+        shellcode = add_control_flow_obfuscation(shellcode, args.control_flow)
+
     if args.func == "ip":
         ipv6 = args.ipv6
         ips = shellcode_to_ips(shellcode, ipv6)
@@ -156,6 +206,7 @@ def main():
             for ip in ips:
                 print(f"    {ip},")
             print("};")
+
     elif args.func == "mac":
         macs = shellcode_to_macs(shellcode)
         encrypt_info = f" (加密: {args.encrypt})" if args.encrypt != "none" else ""
@@ -198,7 +249,16 @@ def main():
             print("};")
     elif args.func == "code":
         encrypt_info = f" (加密: {args.encrypt})" if args.encrypt != "none" else ""
+        if args.polymorphic:
+            encrypt_info = " (加密: polymorphic)"
         print(f"// Shellcode size: {len(shellcode)} bytes{encrypt_info}")
+
+        if args.polymorphic:
+            print("\n// Encryption log:")
+            for offset, method, chunk_len in encryption_log:
+                print(f"//   Offset {offset}: {method} ({chunk_len} bytes)")
+            print()
+
         if args.language == "c":
             result = to_c_byte_array(shellcode, args.section, args.name, args.nop_sled)
             print(result)
@@ -215,6 +275,9 @@ def main():
                 shellcode, args.section, args.name, args.nop_sled
             )
             print(result)
+
+        if args.polymorphic:
+            print("\n" + decryption_code)
 
 
 if __name__ == "__main__":

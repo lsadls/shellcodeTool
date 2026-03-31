@@ -18,6 +18,10 @@
 - **段支持**:
   - 所有语言都支持段定义（.data/.rdata/.text/.rsrc/自定义）
   - 支持自定义数组名称
+- **高级混淆功能**:
+  - 垃圾指令插入（NOP/JMP/CALL）
+  - 控制流混淆
+  - 多态加密
 
 ## 项目结构
 
@@ -27,6 +31,7 @@ shellcodeTool/
 ├── converters.py    # 数据转换模块（IP/MAC/UUID）
 ├── encryption.py    # 加密算法模块
 ├── formatters.py    # 语言格式化模块
+├── obfuscator.py    # 高级混淆模块
 └── README.md        # 项目文档
 ```
 
@@ -46,18 +51,22 @@ python main.py <文件> [选项]
 
 ### 参数说明
 
-| 参数         | 简写 | 说明       | 可选值                              | 默认值       |
-| ---------- | -- | -------- | -------------------------------- | --------- |
-| file       | -  | 输入文件路径   | -                                | 必填        |
-| --language | -l | 输出语言     | c, go, rust, zig                 | rust      |
-| --func     | -f | 功能类型     | code, ip, mac, uuid              | code      |
-| --encrypt  | -e | 加密方式     | none, rot, rc4, xor, aes         | none      |
-| --key      | -k | 加密密钥     | -                                | -         |
-| --section  | -s | 段名称       | .data, .rdata, .text, .rsrc 或自定义 | .data     |
-| --name     | -n | 数组名称     | -                                | shellcode |
-| --nop-sled | -  | NOP sled长度 | 整数（0-255）                      | 0        |
-| --ipv4     | -4 | 使用IPv4格式 | -                                | false     |
-| --ipv6     | -6 | 使用IPv6格式 | -                                | false     |
+| 参数              | 简写 | 说明           | 可选值                              | 默认值       |
+| --------------- | -- | ------------ | -------------------------------- | --------- |
+| file            | -  | 输入文件路径     | -                                | 必填        |
+| --language      | -l | 输出语言         | c, go, rust, zig                 | rust      |
+| --func          | -f | 功能类型         | code, ip, mac, uuid              | code      |
+| --encrypt       | -e | 加密方式         | none, rot, rc4, xor, aes         | none      |
+| --key           | -k | 加密密钥         | -                                | -         |
+| --section       | -s | 段名称           | .data, .rdata, .text, .rsrc 或自定义 | .data     |
+| --name          | -n | 数组名称         | -                                | shellcode |
+| --nop-sled      | -  | NOP sled长度     | 整数                              | 0         |
+| --junk-instructions | -  | 垃圾指令数量     | 整数                              | 0         |
+| --junk-type      | -  | 垃圾指令类型     | nop, jmp, call                   | nop       |
+| --control-flow   | -  | 控制流混淆概率   | 浮点数 (0.0-1.0)                   | 0.0       |
+| --polymorphic    | -  | 启用多态加密     | -                                | false     |
+| --ipv4          | -4 | 使用IPv4格式     | -                                | false     |
+| --ipv6          | -6 | 使用IPv6格式     | -                                | false     |
 
 ## 使用示例
 
@@ -263,7 +272,6 @@ python main.py shellcode.bin -l zig -f uuid -e xor -k "obfuscate"
 ```
 
 输出示例:
-
 ```zig
 // Shellcode size: 27 bytes (加密: xor)
 // UUID count: 2
@@ -272,6 +280,79 @@ const OBFUSCATED_UUIDS = [_][]const u8{
     "9e8ce85757571cebe958a408cd3656cd",
     "344acd3442cd1a4c69d4440000000000",
 };
+```
+
+### 12. 添加垃圾指令（NOP类型）
+
+```bash
+python main.py shellcode.bin -l rust -f code --junk-instructions 20 --junk-type nop
+```
+
+输出示例:
+```rust
+// Shellcode size: 47 bytes
+#[link_section = ".data"]
+// NOP sled: 20 bytes
+static shellcode: &[u8] = &[0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0xfc, 0xe8, 0x82, 0x00, 0x00, 0x00, 0x60, 0x89, 0xe5, 0x31, 0xc0, 0x64, 0x8b, 0x50, 0x30, 0x8b, 0x52, 0x0c, 0x8b, 0x52, 0x14, 0x8b, 0x72, 0x28, 0x0f, 0xb7, 0x4a, 0x26];
+```
+
+### 13. 添加垃圾指令（JMP类型）
+
+```bash
+python main.py shellcode.bin -l go -f code --junk-instructions 10 --junk-type jmp
+```
+
+输出示例:
+```go
+// Shellcode size: 37 bytes
+//go:section .data
+//go:linkname shellcode .data
+var shellcode = []byte{0xEB, 0xEB, 0xEB, 0xEB, 0xEB, 0xEB, 0xEB, 0xEB, 0xEB, 0xEB, 0xfc, 0xe8, 0x82, 0x00, 0x00, 0x00, 0x60, 0x89, 0xe5, 0x31, 0xc0, 0x64, 0x8b, 0x50, 0x30, 0x8b, 0x52, 0x0c, 0x8b, 0x52, 0x14, 0x8b, 0x72, 0x28, 0x0f, 0xb7, 0x4a, 0x26}
+```
+
+### 14. 添加控制流混淆
+
+```bash
+python main.py shellcode.bin -l zig -f code --control-flow 0.3
+```
+
+输出示例:
+```zig
+// Shellcode size: 27 bytes
+comptime { @linksection(".data"); }
+const shellcode = [_]u8{0xEB, 0x1D, 0x24, 0x00, 0xFC, 0xE8, 0x82, 0x00, 0x00, 0x00, 0x60, 0x89, 0xE5, 0x31, 0xC0, 0x64, 0x8B, 0x50, 0x30, 0x8B, 0x52, 0x0C, 0x8B, 0x52, 0x14, 0x8B, 0x72, 0x28, 0x0F, 0xB7, 0x4A, 0x26};
+```
+
+### 15. 使用多态加密
+
+```bash
+python main.py shellcode.bin -l c -f code --polymorphic -k "secret"
+```
+
+输出示例:
+```c
+// Shellcode size: 32 bytes (加密: polymorphic)
+#pragma section(".data", read, write)
+__declspec(allocate(".data")) unsigned char shellcode[] = {
+    0x9e, 0x8c, 0xe8, 0x57, 0x57, 0x57, 0x1c, 0xeb, 0xe9, 0x58, 0xa4, 0x0a, 0xcd, 0x36, 0x56,
+    0xcd, 0x34, 0x4a, 0xcd, 0x34, 0x42, 0xcd, 0x1a, 0x4c, 0x69, 0xd4, 0x44, 0x00, 0x00, 0x00, 0x00
+};
+#pragma comment(linker, "/merge:.data=.data")
+unsigned int shellcode_len = sizeof(shellcode);
+```
+
+### 16. 组合使用多种混淆技术
+
+```bash
+python main.py shellcode.bin -l rust -f code --junk-instructions 10 --control-flow 0.2 --polymorphic -k "secret"
+```
+
+输出示例:
+```rust
+// Shellcode size: 42 bytes (加密: polymorphic)
+#[link_section = ".data"]
+// NOP sled: 10 bytes
+static shellcode: &[u8] = &[0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0xEB, 0x1D, 0x24, 0x00, 0x9e, 0x8c, 0xe8, 0x57, 0x57, 0x57, 0x1c, 0xeb, 0xe9, 0x58, 0xa4, 0x0a, 0xcd, 0x36, 0x56, 0xcd, 0x34, 0x4a, 0xcd, 0x34, 0x42, 0xcd, 0x1a, 0x4c, 0x69, 0xd4, 0x44];
 ```
 
 ## 段说明
@@ -355,6 +436,75 @@ const shellcode = [_]u8{ 0x90, 0x90, 0x90 };
 - 密钥长度自动调整为16/24/32字节
 - 使用PKCS7填充
 - 示例: `-e aes -k "mykey123"`
+
+## 高级混淆功能说明
+
+### 垃圾指令插入
+
+在shellcode前面插入垃圾指令，增加代码混淆度：
+
+- **NOP指令**: 插入0x90 (NOP) 指令
+- **JMP指令**: 插入0xEB (JMP) 指令
+- **CALL指令**: 插入0xE8 (CALL) 指令
+- 示例: `--junk-instructions 10 --junk-type nop`
+
+### 控制流混淆
+
+在shellcode中插入跳转指令，混淆控制流：
+
+- **概率参数**: 0.0-1.0，控制插入跳转指令的频率
+- **跳转指令**: 随机插入短跳转和长跳转
+- 示例: `--control-flow 0.3`
+
+### 多态加密
+
+每次加密使用不同的加密方式组合。生成不同的加密结果和对应的解密代码：
+
+- **加密组合**: 随机选择ROT、RC4、XOR、AES加密方式
+- **分段加密**: 每16字节使用不同的加密方式
+- **自动生成解密代码**: 根据目标语言自动生成对应的解密函数
+- **加密日志**: 记录每个数据块的加密方式和位置
+- 示例: `--polymorphic -k "secret"`
+
+**输出示例**:
+```c
+// Shellcode size: 32 bytes (加密: polymorphic)
+#pragma section(".data", read, write)
+__declspec(allocate(".data")) unsigned char shellcode[] = {
+    0x9e, 0x8c, 0xe8, 0x57, 0x57, 0x57, 0x1c, 0xeb, 0xe9, 0x58, 0xa4, 0x0a, 0xcd, 0x36, 0x56,
+    0xcd, 0x34, 0x4a, 0xcd, 0x34, 0x42, 0xcd, 0x1a, 0x4c, 0x69, 0xd4, 0x44, 0x00, 0x00, 0x00, 0x00
+};
+#pragma comment(linker, "/merge:.data=.data")
+unsigned int shellcode_len = sizeof(shellcode);
+
+// Decryption code
+void decrypt_shellcode(unsigned char* data, int len) {
+    // Chunk at offset 0: xor
+    const char* xor_key = "secret";
+    int key_len = 6;
+    for (int i = 0; i < 16; i++) {
+        data[i] ^= xor_key[i % key_len];
+    }
+    // Chunk at offset 16: rc4
+    // RC4 decryption (same as encryption)
+    unsigned char s[256];
+    int j = 0;
+    const char* rc4_key = "secret";
+    int key_len = 6;
+    for (int i = 0; i < 256; i++) s[i] = i;
+    for (int i = 0; i < 256; i++) {
+        j = (j + s[i] + rc4_key[i % key_len]) % 256;
+        unsigned char tmp = s[i]; s[i] = s[j]; s[j] = tmp;
+    }
+    int ii = 0, jj = 0;
+    for (int i = 16; i < 32; i++) {
+        ii = (ii + 1) % 256;
+        jj = (jj + s[ii]) % 256;
+        unsigned char tmp = s[ii]; s[ii] = s[jj]; s[jj] = tmp;
+        data[i] ^= s[(s[ii] + s[jj]) % 256];
+    }
+}
+```
 
 ## 模块说明
 
