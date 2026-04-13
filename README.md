@@ -10,6 +10,7 @@
   - IP地址（IPv4/IPv6）
   - MAC地址
   - UUID
+  - 英语单词（4字母单词映射0x00-0xFF）
 - **多种加密算法**:
   - ROT加密（循环移位）
   - RC4流加密
@@ -55,7 +56,7 @@ python main.py <文件> [选项]
 | --------------- | -- | ------------ | -------------------------------- | --------- |
 | file            | -  | 输入文件路径     | -                                | 必填        |
 | --language      | -l | 输出语言         | c, go, rust, zig                 | rust      |
-| --func          | -f | 功能类型         | code, ip, mac, uuid              | code      |
+| --func          | -f | 功能类型         | code, ip, mac, uuid, words       | code      |
 | --encrypt       | -e | 加密方式         | none, rot, rc4, xor, aes         | none      |
 | --key           | -k | 加密密钥         | -                                | -         |
 | --section       | -s | 段名称           | .data, .rdata, .text, .rsrc 或自定义 | .data     |
@@ -282,7 +283,71 @@ const OBFUSCATED_UUIDS = [_][]const u8{
 };
 ```
 
-### 12. 添加垃圾指令（NOP类型）
+### 12. 转换为英语单词列表
+
+将shellcode字节转换为4字母英语单词，每个字节（0x00-0xFF）映射到一个唯一的4字母单词：
+
+```bash
+python main.py shellcode.bin -l c -f words
+```
+
+输出示例:
+```c
+// English word obfuscated shellcode
+const char* shellcode_words[] = {"able", "back", "call", "data", "each", "face", "game", "hard"};
+const int shellcode_len = 8;
+
+// 256个4字母单词映射表
+const char* word_map[256] = {
+    "able", "back", "call", "data", "each", "face", "game", "hard", ...
+};
+
+void decode_shellcode(unsigned char* output) {
+    // 构建单词到字节的映射
+    unsigned char word_to_byte[256];
+    for (int i = 0; i < 256; i++) {
+        for (int j = 0; j < 256; j++) {
+            if (word_map[j][0] == shellcode_words[i][0] &&
+                word_map[j][1] == shellcode_words[i][1] &&
+                word_map[j][2] == shellcode_words[i][2] &&
+                word_map[j][3] == shellcode_words[i][3]) {
+                output[i] = (unsigned char)j;
+                break;
+            }
+        }
+    }
+}
+```
+
+Go语言示例:
+```bash
+python main.py shellcode.bin -l go -f words
+```
+
+输出示例:
+```go
+// English word obfuscated shellcode
+var shellcodeWords = []string{"able", "back", "call", "data", "each", "face", "game", "hard"}
+var shellcodeLen = 8
+
+// 256个4字母单词映射表
+var wordMap = [256]string{"able", "back", "call", ...}
+
+func decodeShellcode() []byte {
+    output := make([]byte, len(shellcodeWords))
+    for i, word := range shellcodeWords {
+        for j, mw := range wordMap {
+            if word == mw {
+                output[i] = byte(j)
+                break
+            }
+        }
+    }
+    return output
+}
+```
+
+### 13. 添加垃圾指令（NOP类型）
 
 ```bash
 python main.py shellcode.bin -l rust -f code --junk-instructions 20 --junk-type nop
@@ -296,7 +361,7 @@ python main.py shellcode.bin -l rust -f code --junk-instructions 20 --junk-type 
 static shellcode: &[u8] = &[0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0xfc, 0xe8, 0x82, 0x00, 0x00, 0x00, 0x60, 0x89, 0xe5, 0x31, 0xc0, 0x64, 0x8b, 0x50, 0x30, 0x8b, 0x52, 0x0c, 0x8b, 0x52, 0x14, 0x8b, 0x72, 0x28, 0x0f, 0xb7, 0x4a, 0x26];
 ```
 
-### 13. 添加垃圾指令（JMP类型）
+### 14. 添加垃圾指令（JMP类型）
 
 ```bash
 python main.py shellcode.bin -l go -f code --junk-instructions 10 --junk-type jmp
@@ -310,7 +375,7 @@ python main.py shellcode.bin -l go -f code --junk-instructions 10 --junk-type jm
 var shellcode = []byte{0xEB, 0xEB, 0xEB, 0xEB, 0xEB, 0xEB, 0xEB, 0xEB, 0xEB, 0xEB, 0xfc, 0xe8, 0x82, 0x00, 0x00, 0x00, 0x60, 0x89, 0xe5, 0x31, 0xc0, 0x64, 0x8b, 0x50, 0x30, 0x8b, 0x52, 0x0c, 0x8b, 0x52, 0x14, 0x8b, 0x72, 0x28, 0x0f, 0xb7, 0x4a, 0x26}
 ```
 
-### 14. 添加控制流混淆
+### 15. 添加控制流混淆
 
 ```bash
 python main.py shellcode.bin -l zig -f code --control-flow 0.3
@@ -323,7 +388,7 @@ comptime { @linksection(".data"); }
 const shellcode = [_]u8{0xEB, 0x1D, 0x24, 0x00, 0xFC, 0xE8, 0x82, 0x00, 0x00, 0x00, 0x60, 0x89, 0xE5, 0x31, 0xC0, 0x64, 0x8B, 0x50, 0x30, 0x8B, 0x52, 0x0C, 0x8B, 0x52, 0x14, 0x8B, 0x72, 0x28, 0x0F, 0xB7, 0x4A, 0x26};
 ```
 
-### 15. 使用多态加密
+### 16. 使用多态加密
 
 ```bash
 python main.py shellcode.bin -l c -f code --polymorphic -k "secret"
@@ -341,7 +406,7 @@ __declspec(allocate(".data")) unsigned char shellcode[] = {
 unsigned int shellcode_len = sizeof(shellcode);
 ```
 
-### 16. 组合使用多种混淆技术
+### 17. 组合使用多种混淆技术
 
 ```bash
 python main.py shellcode.bin -l rust -f code --junk-instructions 10 --control-flow 0.2 --polymorphic -k "secret"
@@ -533,6 +598,17 @@ void decrypt_shellcode(unsigned char* data, int len) {
 - `to_go_byte_slice()`: 转换为Go语言格式
 - `to_rust_byte_slice()`: 转换为Rust语言格式
 - `to_zig_byte_slice()`: 转换为Zig语言格式
+
+### obfuscator.py
+
+高级混淆模块，提供以下功能:
+
+- `add_junk_instructions()`: 添加垃圾指令
+- `add_control_flow_obfuscation()`: 控制流混淆
+- `add_polymorphic_encryption()`: 多态加密
+- `bytes_to_english_words()`: 字节转英语单词
+- `english_words_to_bytes()`: 英语单词转字节
+- `generate_english_word_shellcode()`: 生成英语单词混淆代码
 
 ## 注意事项
 

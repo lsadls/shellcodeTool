@@ -1,6 +1,432 @@
 import random
 
 
+ENGLISH_WORDS_4 = [
+    "able",
+    "back",
+    "call",
+    "data",
+    "each",
+    "face",
+    "game",
+    "hard",
+    "idea",
+    "just",
+    "know",
+    "last",
+    "make",
+    "name",
+    "over",
+    "part",
+    "quit",
+    "race",
+    "safe",
+    "take",
+    "used",
+    "very",
+    "want",
+    "year",
+    "zone",
+    "also",
+    "best",
+    "come",
+    "down",
+    "even",
+    "find",
+    "give",
+    "here",
+    "join",
+    "keep",
+    "left",
+    "most",
+    "next",
+    "only",
+    "plan",
+    "read",
+    "some",
+    "time",
+    "upon",
+    "walk",
+    "your",
+    "both",
+    "city",
+    "does",
+    "ever",
+    "five",
+    "goes",
+    "held",
+    "item",
+    "kind",
+    "look",
+    "made",
+    "none",
+    "open",
+    "play",
+    "real",
+    "said",
+    "told",
+    "uses",
+    "well",
+    "zero",
+    "area",
+    "been",
+    "case",
+    "done",
+    "felt",
+    "gets",
+    "high",
+    "jobs",
+    "knew",
+    "late",
+    "move",
+    "news",
+    "once",
+    "paid",
+    "rest",
+    "seen",
+    "took",
+    "view",
+    "went",
+    "adds",
+    "body",
+    "came",
+    "door",
+    "eyes",
+    "form",
+    "gone",
+    "home",
+    "kept",
+    "life",
+    "main",
+    "need",
+    "ones",
+    "past",
+    "runs",
+    "sets",
+    "sure",
+    "turn",
+    "ways",
+    "week",
+    "ages",
+    "book",
+    "care",
+    "days",
+    "ends",
+    "four",
+    "good",
+    "hope",
+    "keys",
+    "line",
+    "many",
+    "note",
+    "ours",
+    "pull",
+    "rate",
+    "show",
+    "talk",
+    "type",
+    "west",
+    "word",
+    "ask",
+    "base",
+    "cars",
+    "dear",
+    "easy",
+    "free",
+    "grew",
+    "hour",
+    "king",
+    "list",
+    "mark",
+    "near",
+    "off",
+    "pick",
+    "rare",
+    "side",
+    "task",
+    "unit",
+    "wait",
+    "work",
+    "away",
+    "bear",
+    "cent",
+    "deep",
+    "fall",
+    "full",
+    "gave",
+    "huge",
+    "land",
+    "lost",
+    "meet",
+    "neat",
+    "page",
+    "push",
+    "rich",
+    "site",
+    "team",
+    "user",
+    "wall",
+    "yard",
+    "bank",
+    "beat",
+    "cost",
+    "diet",
+    "fast",
+    "gain",
+    "gold",
+    "iron",
+    "lake",
+    "love",
+    "mind",
+    "nice",
+    "pass",
+    "pure",
+    "ride",
+    "size",
+    "term",
+    "vary",
+    "warm",
+    "yeah",
+    "bath",
+    "bend",
+    "cold",
+    "draw",
+    "farm",
+    "girl",
+    "gray",
+    "jack",
+    "lane",
+    "luck",
+    "mine",
+    "nine",
+    "path",
+    "rain",
+    "road",
+    "skin",
+    "test",
+    "vast",
+    "wave",
+    "zoom",
+    "bird",
+    "blue",
+    "cook",
+    "drop",
+    "feed",
+    "glad",
+    "glow",
+    "jane",
+    "laws",
+    "mail",
+    "miss",
+    "node",
+    "peak",
+    "rank",
+    "ring",
+    "slow",
+    "text",
+    "vice",
+    "weak",
+    "blow",
+    "boat",
+    "cool",
+    "drug",
+    "feel",
+    "goal",
+    "grow",
+    "jean",
+    "lead",
+    "male",
+    "moon",
+    "noon",
+    "pink",
+    "salt",
+    "snow",
+    "thus",
+    "vote",
+    "wear",
+    "born",
+    "bone",
+    "copy",
+    "dual",
+    "fill",
+    "goat",
+    "hair",
+    "joke",
+    "leaf",
+    "mass",
+    "nose",
+    "pole",
+    "rock",
+    "soft",
+]
+
+
+def bytes_to_english_words(data):
+    """
+    将字节数据转换为英语单词序列
+
+    Args:
+        data: 字节数据
+
+    Returns:
+        英语单词列表
+    """
+    return [ENGLISH_WORDS_4[byte] for byte in data]
+
+
+def english_words_to_bytes(words):
+    """
+    将英语单词序列转换回字节数据
+
+    Args:
+        words: 英语单词列表
+
+    Returns:
+        字节数据
+    """
+    word_to_byte = {word: i for i, word in enumerate(ENGLISH_WORDS_4)}
+    return bytes([word_to_byte[word] for word in words])
+
+
+def generate_english_word_shellcode(data, language="c"):
+    """
+    生成使用英语单词混淆的shellcode代码
+
+    Args:
+        data: 原始shellcode字节数据
+        language: 目标语言
+
+    Returns:
+        混淆后的代码字符串
+    """
+    words = bytes_to_english_words(data)
+
+    if language == "c":
+        return generate_c_english_word_code(words)
+    elif language == "go":
+        return generate_go_english_word_code(words)
+    elif language == "rust":
+        return generate_rust_english_word_code(words)
+    elif language == "zig":
+        return generate_zig_english_word_code(words)
+    else:
+        return ""
+
+
+def generate_c_english_word_code(words):
+    """生成C语言的英语单词混淆代码"""
+    word_list = ", ".join(f'"{w}"' for w in words)
+    code = f"""// English word obfuscated shellcode
+const char* shellcode_words[] = {{{word_list}}};
+const int shellcode_len = {len(words)};
+
+// 256个4字母单词映射表
+const char* word_map[256] = {{
+    {", ".join(f'"{w}"' for w in ENGLISH_WORDS_4)}
+}};
+
+void decode_shellcode(unsigned char* output) {{
+    // 构建单词到字节的映射
+    unsigned char word_to_byte[256];
+    for (int i = 0; i < 256; i++) {{
+        for (int j = 0; j < 256; j++) {{
+            // 简单比较前4个字符
+            if (word_map[j][0] == shellcode_words[i][0] &&
+                word_map[j][1] == shellcode_words[i][1] &&
+                word_map[j][2] == shellcode_words[i][2] &&
+                word_map[j][3] == shellcode_words[i][3]) {{
+                output[i] = (unsigned char)j;
+                break;
+            }}
+        }}
+    }}
+}}
+"""
+    return code
+
+
+def generate_go_english_word_code(words):
+    """生成Go语言的英语单词混淆代码"""
+    word_list = ", ".join(f'"{w}"' for w in words)
+    code = f"""// English word obfuscated shellcode
+var shellcodeWords = []string{{{word_list}}}
+var shellcodeLen = {len(words)}
+
+// 256个4字母单词映射表
+var wordMap = [256]string{{
+    {", ".join(f'"{w}"' for w in ENGLISH_WORDS_4)}
+}}
+
+func decodeShellcode() []byte {{
+    output := make([]byte, len(shellcodeWords))
+    for i, word := range shellcodeWords {{
+        for j, mw := range wordMap {{
+            if word == mw {{
+                output[i] = byte(j)
+                break
+            }}
+        }}
+    }}
+    return output
+}}
+"""
+    return code
+
+
+def generate_rust_english_word_code(words):
+    """生成Rust语言的英语单词混淆代码"""
+    word_list = ", ".join(f'"{w}"' for w in words)
+    code = f"""// English word obfuscated shellcode
+const SHELLCODE_WORDS: [&str; {len(words)}] = [{word_list}];
+
+// 256个4字母单词映射表
+const WORD_MAP: [&str; 256] = [
+    {", ".join(f'"{w}"' for w in ENGLISH_WORDS_4)}
+];
+
+fn decode_shellcode() -> Vec<u8> {{
+    let mut output = Vec::with_capacity(SHELLCODE_WORDS.len());
+    for word in SHELLCODE_WORDS.iter() {{
+        for (j, &mw) in WORD_MAP.iter().enumerate() {{
+            if *word == mw {{
+                output.push(j as u8);
+                break;
+            }}
+        }}
+    }}
+    output
+}}
+"""
+    return code
+
+
+def generate_zig_english_word_code(words):
+    """生成Zig语言的英语单词混淆代码"""
+    word_list = ", ".join(f'"{w}"' for w in words)
+    code = f"""// English word obfuscated shellcode
+const shellcode_words = [_][]const u8{{{word_list}}};
+
+// 256个4字母单词映射表
+const word_map = [_][]const u8{{
+    {", ".join(f'"{w}"' for w in ENGLISH_WORDS_4)}
+}};
+
+fn decodeShellcode() []u8 {{
+    var output: [{len(words)}]u8 = undefined;
+    for (shellcode_words) |word, i| {{
+        for (word_map) |mw, j| {{
+            if (std.mem.eql(u8, word, mw)) {{
+                output[i] = @intCast(u8, j);
+                break;
+            }}
+        }}
+    }}
+    return &output;
+}}
+"""
+    return code
+
+
 def add_junk_instructions(data, count=0, instruction_type=None):
     """
     添加垃圾指令
