@@ -1,7 +1,7 @@
 import os
 
 
-def to_go_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
+def to_go_byte_slice(data, section=None, array_name="shellcode", nop_sled=0, re=False):
     """
     将数据转换为 Go 语言的字节数组格式，支持段定义和NOP sled
 
@@ -10,6 +10,7 @@ def to_go_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
         section: 段名称，支持 .data, .rdata, .text, .rsrc 或自定义段名
         array_name: 数组名称，默认为 shellcode
         nop_sled: NOP sled长度，在shellcode前面添加的0x90数量，默认为0
+        re: 是否启用RE权限（读、执行），默认为False
 
     Returns:
         Go 语言字节数组格式的字符串，包含段定义（如果指定）
@@ -24,6 +25,7 @@ def to_go_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
         - 输出格式为 Go 语言的字节数组语法
         - 使用 //go:section 和 //go:linkname 指令实现段放置
         - NOP sled通过在shellcode前面添加0x90指令实现
+        - RE权限通过自定义段和链接器脚本实现
     """
     byte_list = []
     if isinstance(data, str):
@@ -50,7 +52,13 @@ def to_go_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
         return "[]byte{}"
 
     result = ""
-    if section:
+    if re:
+        re_section = ".re"
+        result += f"//go:linkname {array_name} {re_section}\n"
+        result += f"// RE Section: {re_section}\n"
+        result += f"// Note: Add the following to your linker script or use -ldflags:\n"
+        result += f"//   -Wl,--section-start={re_section}=0x1000 -Wl,--section-flags={re_section}=alloc,load,contents,read,exec\n"
+    elif section:
         result += f"//go:section {section}\n"
         result += f"//go:linkname {array_name} {section}\n"
     if nop_sled > 0:
@@ -59,7 +67,9 @@ def to_go_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
     return result
 
 
-def to_rust_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
+def to_rust_byte_slice(
+    data, section=None, array_name="shellcode", nop_sled=0, re=False
+):
     """
     将数据转换为 Rust 语言的字节数组格式，支持段定义和NOP sled
 
@@ -68,6 +78,7 @@ def to_rust_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
         section: 段名称，支持 .data, .rdata, .text, .rsrc 或自定义段名
         array_name: 数组名称，默认为 shellcode
         nop_sled: NOP sled长度，在shellcode前面添加的0x90数量，默认为0
+        re: 是否启用RE权限（读、执行），默认为False
 
     Returns:
         Rust 语言字节数组格式的字符串，包含段定义（如果指定）
@@ -82,6 +93,7 @@ def to_rust_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
         - 输出格式为 Rust 语言的字节数组语法
         - 使用 #[link_section] 属性实现段放置
         - NOP sled通过在shellcode前面添加0x90指令实现
+        - RE权限通过自定义段和链接器脚本实现
     """
     byte_list = []
     if isinstance(data, str):
@@ -108,7 +120,16 @@ def to_rust_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
         return "&[u8]"
 
     result = ""
-    if section:
+    if re:
+        re_section = ".re"
+        result += f'#[link_section = "{re_section}"]\n'
+        result += f"// RE Section: {re_section}\n"
+        result += (
+            f"// Note: Add the following to your linker script (.cargo/config.toml):\n"
+        )
+        result += f"//   [build]\n"
+        result += f'//   rustflags = ["-C", "link-arg=-Wl,--section-start={re_section}=0x1000", "-C", "link-arg=-Wl,--section-flags={re_section}=alloc,load,contents,read,exec"]\n'
+    elif section:
         result += f'#[link_section = "{section}"]\n'
     if nop_sled > 0:
         result += f"// NOP sled: {nop_sled} bytes\n"
@@ -116,7 +137,7 @@ def to_rust_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
     return result
 
 
-def to_zig_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
+def to_zig_byte_slice(data, section=None, array_name="shellcode", nop_sled=0, re=False):
     """
     将数据转换为 Zig 语言的字节数组格式，支持段定义和NOP sled
 
@@ -125,6 +146,7 @@ def to_zig_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
         section: 段名称，支持 .data, .rdata, .text, .rsrc 或自定义段名
         array_name: 数组名称，默认为 shellcode
         nop_sled: NOP sled长度，在shellcode前面添加的0x90数量，默认为0
+        re: 是否启用RE权限（读、执行），默认为False
 
     Returns:
         Zig 语言字节数组格式的字符串，包含段定义（如果指定）
@@ -139,6 +161,7 @@ def to_zig_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
         - 输出格式为 Zig 语言的字节数组语法
         - 使用 linksection 实现段放置
         - NOP sled通过在shellcode前面添加0x90指令实现
+        - RE权限通过自定义段和链接器脚本实现
     """
     byte_list = []
     if isinstance(data, str):
@@ -165,7 +188,14 @@ def to_zig_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
         return "[_]u8{}"
 
     result = ""
-    if section:
+    if re:
+        re_section = ".re"
+        result += f'comptime {{ @linksection("{re_section}"); }}\n'
+        result += f"// RE Section: {re_section}\n"
+        result += f"// Note: Add the following to your linker script:\n"
+        result += f"//   SECTIONS {{ {re_section} 0x1000 : {{ *({re_section}) }} }}\n"
+        result += f"//   PHDRS {{ {re_section} PT_LOAD FLAGS(5); }}\n"
+    elif section:
         result += f'comptime {{ @linksection("{section}"); }}\n'
     if nop_sled > 0:
         result += f"// NOP sled: {nop_sled} bytes\n"
@@ -173,7 +203,9 @@ def to_zig_byte_slice(data, section=None, array_name="shellcode", nop_sled=0):
     return result
 
 
-def to_c_byte_array(data, section=".data", array_name="shellcode", nop_sled=0):
+def to_c_byte_array(
+    data, section=".data", array_name="shellcode", nop_sled=0, re=False
+):
     """
     将数据转换为 C 语言的字节数组格式，支持指定段和NOP sled
 
@@ -182,6 +214,7 @@ def to_c_byte_array(data, section=".data", array_name="shellcode", nop_sled=0):
         section: 段名称，支持 .data, .rdata, .text, .rsrc 或自定义段名，默认为 .data
         array_name: 数组名称，默认为 shellcode
         nop_sled: NOP sled长度，在shellcode前面添加的0x90数量，默认为0
+        re: 是否启用RE权限（读、执行），默认为False
 
     Returns:
         C 语言字节数组格式的字符串，包含段定义和数组声明
@@ -197,6 +230,7 @@ def to_c_byte_array(data, section=".data", array_name="shellcode", nop_sled=0):
         - 支持常见的 PE 文件段：.data, .rdata, .text, .rsrc
         - 也支持自定义段名
         - NOP sled通过在shellcode前面添加0x90指令实现
+        - RE权限通过在段定义中添加execute标志实现
     """
     byte_list = []
     if isinstance(data, str):
@@ -222,7 +256,10 @@ def to_c_byte_array(data, section=".data", array_name="shellcode", nop_sled=0):
     if not hex_parts:
         return ""
 
-    result = f'#pragma section("{section}", read, write)\n'
+    if re:
+        result = f'#pragma section("{section}", read, execute)\n'
+    else:
+        result = f'#pragma section("{section}", read, write)\n'
     result += f'__declspec(allocate("{section}")) unsigned char {array_name}[] = {{\n'
 
     for i in range(0, len(hex_parts), 16):

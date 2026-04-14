@@ -66,6 +66,7 @@ python main.py <文件> [选项]
 | --junk-type      | -  | 垃圾指令类型     | nop, jmp, call                   | nop       |
 | --control-flow   | -  | 控制流混淆概率   | 浮点数 (0.0-1.0)                   | 0.0       |
 | --polymorphic    | -  | 启用多态加密     | -                                | false     |
+| --re             | -  | 启用RE权限（读、执行） | -                           | false     |
 | --ipv4          | -4 | 使用IPv4格式     | -                                | false     |
 | --ipv6          | -6 | 使用IPv6格式     | -                                | false     |
 
@@ -418,6 +419,26 @@ python main.py shellcode.bin -l rust -f code --junk-instructions 10 --control-fl
 #[link_section = ".data"]
 // NOP sled: 10 bytes
 static shellcode: &[u8] = &[0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0xEB, 0x1D, 0x24, 0x00, 0x9e, 0x8c, 0xe8, 0x57, 0x57, 0x57, 0x1c, 0xeb, 0xe9, 0x58, 0xa4, 0x0a, 0xcd, 0x36, 0x56, 0xcd, 0x34, 0x4a, 0xcd, 0x34, 0x42, 0xcd, 0x1a, 0x4c, 0x69, 0xd4, 0x44];
+```
+
+### 18. 使用RE权限（直接分配可执行内存）
+
+直接分配具有读、执行权限的内存，避免使用 VirtualProtect：
+
+```bash
+python main.py shellcode.bin -l c --re
+```
+
+输出示例:
+```c
+// Shellcode size: 27 bytes
+#pragma section(".data", read, execute)
+__declspec(allocate(".data")) unsigned char shellcode[] = {
+    0xfc, 0xe8, 0x82, 0x00, 0x00, 0x00, 0x60, 0x89, 0xe5, 0x31, 0xc0, 0x64, 0x8b, 0x50, 0x30,
+    0x8b, 0x52, 0x0c, 0x8b, 0x52, 0x14, 0x8b, 0x72, 0x28, 0x0f, 0xb7, 0x4a, 0x26
+};
+#pragma comment(linker, "/merge:.data=.data")
+unsigned int shellcode_len = sizeof(shellcode);
 ```
 
 ## 段说明

@@ -111,6 +111,11 @@ def main():
         help="启用多态加密，每次加密使用不同的加密方式组合",
     )
     parser.add_argument(
+        "--re",
+        action="store_true",
+        help="启用RE权限（读、执行），直接避免使用VirtualProtect",
+    )
+    parser.add_argument(
         "-e",
         "--encrypt",
         choices=["none", "rot", "rc4", "xor", "aes"],
@@ -260,19 +265,23 @@ def main():
             print()
 
         if args.language == "c":
-            result = to_c_byte_array(shellcode, args.section, args.name, args.nop_sled)
+            result = to_c_byte_array(
+                shellcode, args.section, args.name, args.nop_sled, args.re
+            )
             print(result)
         elif args.language == "go":
-            result = to_go_byte_slice(shellcode, args.section, args.name, args.nop_sled)
+            result = to_go_byte_slice(
+                shellcode, args.section, args.name, args.nop_sled, args.re
+            )
             print(result)
         elif args.language == "rust":
             result = to_rust_byte_slice(
-                shellcode, args.section, args.name, args.nop_sled
+                shellcode, args.section, args.name, args.nop_sled, args.re
             )
             print(result)
         elif args.language == "zig":
             result = to_zig_byte_slice(
-                shellcode, args.section, args.name, args.nop_sled
+                shellcode, args.section, args.name, args.nop_sled, args.re
             )
             print(result)
 
